@@ -92,7 +92,7 @@ module Util {
         getPlatform: () => string;
         getArchitecture: () => string;
 
-        isMobile: () => bool;
+        isMobile: () => boolean;
     };
 
     export class TEnvOriData {
@@ -103,8 +103,8 @@ module Util {
 
     // 系统信息基类
     class TEnvSystemInfoBase {
-        private strPlatform: string;
-        private strArchitecture = "x86";
+        protected strPlatform: string;
+        protected strArchitecture = "x86";
 
         public getOSName() {
             return "Unknown";
@@ -129,30 +129,32 @@ module Util {
         constructor(ori: TEnvOriData) {
             this.strPlatform = ori.nav.platform || "Unknown";
 
-            if (ori.userAgent.match(/ia64/i))
+            if(this.strPlatform.match(/arm/i)) {
+                this.strArchitecture = "arm";
+            } else if (ori.userAgent.match(/ia64/i)) {
                 this.strArchitecture = "ia64";
-            else if (ori.userAgent.match(/win64|wow64|x64|x86_64/i))
+            } else if (ori.userAgent.match(/x64|x86_64/i)) {
                 this.strArchitecture = "x86_64";
-
+            }
         }
     };
 
     // Windows系统信息
     class TEnvSystemWindowsInfo extends TEnvSystemInfoBase {
         private static __nt_kernel_name_map = {
-            "6.3": "Microsoft Windows 8.1/Microsoft Windows RT 8.1/Windows Server 2012 R2",
-            "6.2": "Microsoft Windows 8/Microsoft Windows RT/Windows Server 2012",
-            "6.1": "Microsoft Windows 7/Windows Server 2008 R2",
-            "6.0": "Microsoft Windows Vista/Windows Server 2008",
-            "5.2": "Windows Server 2003",
-            "5.1": "Microsoft Windows XP",
-            "5.0": "Microsoft Windows 2000",
+            "10.0": "Microsoft Windows 10/Microsoft Windows RT 10/Windows Server 10",
+            "6.4":  "Microsoft Windows 10/Microsoft Windows RT 10/Windows Server 10",
+            "6.3":  "Microsoft Windows 8.1/Microsoft Windows RT 8.1/Windows Server 2012 R2",
+            "6.2":  "Microsoft Windows 8/Microsoft Windows RT/Windows Server 2012",
+            "6.1":  "Microsoft Windows 7/Windows Server 2008 R2",
+            "6.0":  "Microsoft Windows Vista/Windows Server 2008",
+            "5.2":  "Windows Server 2003",
+            "5.1":  "Microsoft Windows XP",
+            "5.0":  "Microsoft Windows 2000",
         };
 
         private strOSName = "Windows";
         private strOSKernel = "Windows";
-        private strArchitecture =
-            "x86";
         private bIsMobile = false;
 
         public getOSName() {
@@ -175,6 +177,9 @@ module Util {
             super(ori);
 
             this._init_branch(ori.userAgent);
+            
+            if (ori.nav.cpuClass)
+                this.strArchitecture = ori.nav.cpuClass;
         }
 
         private _init_branch(ua: string) {
@@ -211,6 +216,7 @@ module Util {
                 t_ver = TEnvVersionInfo.GetVersion(ua, /windows phone ([\d.]+)/i, 1);
                 if (null !== t_ver) {
                     this.strOSName = "Microsoft Windows Phone " + t_ver.toString();
+                    this.strArchitecture = "ARM";
                     this.bIsMobile = true;
                     break;
                 }
@@ -242,8 +248,9 @@ module Util {
                 this.strOSName = "Microsoft XBox";
             }
 
-            if (ua.match(/arm/i))
-                this.strArchitecture = "ARM";
+            var try_match_arch = ua.match(/\barm|\bx86\b|\bx86_64\b|\bi\d86\b/i);
+            if (try_match_arch)
+                this.strArchitecture = try_match_arch[0];
         }
     };
 
@@ -252,7 +259,6 @@ module Util {
     class TEnvSystemLinuxInfo extends TEnvSystemInfoBase {
         private strOSName = "Linux";
         private strOSKernel = "Linux";
-        private strArchitecture = "x86";
         private bIsMobile = false;
 
         public getOSName() {
@@ -300,18 +306,9 @@ module Util {
             if (ua.match(/mobile/i) || ua.match(/tablet/i))
                 this.bIsMobile = true;
 
-            do {
-                if (ua.match(/x86_64/i)) {
-                    this.strArchitecture = "x86_64";
-                    break;
-                }
-
-                if (ua.match(/arm/i)) {
-                    this.strArchitecture = "ARM";
-                    break;
-                }
-
-            } while (false);
+            var try_match_arch = ua.match(/\barm|\bx86\b|\bx86_64\b|\bi\d86\b/i);
+            if (try_match_arch)
+                this.strArchitecture = try_match_arch[0];
         }
     };
 
@@ -319,7 +316,6 @@ module Util {
     class TEnvSystemMacIOSInfo extends TEnvSystemInfoBase {
         private strOSName = "Mac";
         private strOSKernel = "Mac";
-        private strArchitecture = "x86";
         private bIsMobile = false;
 
         public getOSName() {
@@ -354,6 +350,10 @@ module Util {
                     this.strOSName = "Apple iOS";
                     break;
                 }
+                
+                var try_match_arch = ua.match(/\barm|\bx86\b|\bx86_64\b|\bi\d86\b/i);
+                if (try_match_arch)
+                    this.strArchitecture = try_match_arch[0];
             } while (false);
 
             if (ua.match(/mobile/i))
@@ -380,7 +380,6 @@ module Util {
     class TEnvSystemOtherInfo extends TEnvSystemInfoBase {
         private strOSName = "Unknown";
         private strOSKernel = "Unknown";
-        private strArchitecture = "x86";
         private bIsMobile = false;
 
         public getOSName() {
@@ -442,6 +441,10 @@ module Util {
                     this.bIsMobile = true;
                     break;
                 }
+                
+                var try_match_arch = ua.match(/\barm|\bx86\b|\bx86_64\b|\bi\d86\b/i);
+                if (try_match_arch)
+                    this.strArchitecture = try_match_arch[0];
             } while (false);
         }
     };
@@ -457,17 +460,17 @@ module Util {
         getBrowserArchitecture: () => string;
 
         getAdditional: () => string;
-        isMobile: () => bool;
-        isCompatMode: () => bool;
-        isCookieEnabled: () => bool;
+        isMobile: () => boolean;
+        isCompatMode: () => boolean;
+        isCookieEnabled: () => boolean;
     };
 
     // 浏览器检测基类
     class TEnvBrowserInfoBase {
-        private strRenderMode = "Unknown";
-        private strBrowserArchitecture = "x86";
-        private bIsCookieEnabled = false;
-        private bIsMobile = false;
+        protected strRenderMode = "Unknown";
+        protected strBrowserArchitecture = "x86";
+        protected bIsCookieEnabled = false;
+        protected bIsMobile = false;
 
         public getBrowserName() {
             return "Unknown";
@@ -529,7 +532,6 @@ module Util {
         private strBrowserKernelName = "Presto";
         private stBrowserVersion: TEnvVersionInfo;
         private stBrowserKernelVersion: TEnvVersionInfo;
-        private bIsMobile = false;
 
         public getBrowserName() {
             return this.strBrowserName;
@@ -601,10 +603,8 @@ module Util {
         private strBrowserName = "Internet Explorer";
         private strBrowserShortName = "IE";
         private strBrowserKernelName = "Trident";
-        private strBrowserArchitecture = "x86";
         private stBrowserVersion: TEnvVersionInfo;
         private stBrowserKernelVersion: TEnvVersionInfo;
-        private bIsMobile = false;
         private strAdditional = "";
         private bIsCompatMode = false;
 
@@ -646,7 +646,7 @@ module Util {
 
         constructor(ori: TEnvOriData, sysInfo: IEnvSystemInfo) {
             super(ori, sysInfo);
-            this.bIsMobile = sysInfo.isMobile();
+
             this.strBrowserArchitecture = super.getBrowserArchitecture();
 
             this._init_branch(ori.userAgent, sysInfo);
@@ -751,6 +751,89 @@ module Util {
             }
         }
     };
+    
+    // IE浏览器检测类
+    class TEnvBrowserEdgeInfo extends TEnvBrowserInfoBase {
+        private strBrowserName = "Edge";
+        private strBrowserShortName = "Edge";
+        private strBrowserKernelName = "Edge";
+        private stBrowserVersion: TEnvVersionInfo;
+        private stBrowserKernelVersion: TEnvVersionInfo;
+        private strAdditional = "";
+        private bIsCompatMode = false;
+
+        public getBrowserName() {
+            return this.strBrowserName;
+        }
+
+        public getBrowserShortName() {
+            return this.strBrowserShortName;
+        }
+
+        public getBrowserVersion() {
+            return this.stBrowserVersion;
+        }
+
+        public getBrowserKernelName() {
+            return this.strBrowserKernelName;
+        }
+
+        public getBrowserKernelVersion() {
+            return this.stBrowserKernelVersion;
+        }
+
+        public getAdditional() {
+            return this.strAdditional;
+        }
+
+        public getBrowserArchitecture() {
+            return this.strBrowserArchitecture;
+        }
+
+        public isMobile() {
+            return this.bIsMobile;
+        }
+
+        public isCompatMode() {
+            return this.bIsCompatMode;
+        }
+
+        constructor(ori: TEnvOriData, sysInfo: IEnvSystemInfo) {
+            super(ori, sysInfo);
+
+            this.strBrowserArchitecture = super.getBrowserArchitecture();
+
+            this._init_branch(ori.userAgent, sysInfo);
+
+            // 覆盖浏览器架构信息
+            if (ori.nav.cpuClass)
+                this.strBrowserArchitecture = ori.nav.cpuClass;
+        }
+
+        private _init_branch(ua: string, sysInfo: IEnvSystemInfo) {
+            // 检测浏览器版本
+            var _checked_version = TEnvVersionInfo.GetVersion(ua, /edge\/([\w.]+)/i, 1);
+            if (null === _checked_version)
+                _checked_version = TEnvVersionInfo.GetVersion(ua, /rv:([\w.]+)/i, 1);
+            if (null === _checked_version)
+                this.stBrowserVersion = new TEnvVersionInfo("");
+            this.stBrowserVersion = _checked_version;
+
+            // 检测内核版本
+            this.stBrowserKernelVersion = TEnvVersionInfo.GetVersion(ua, /trident\/([\w.]+)/i, 1);
+            if (null == this.stBrowserKernelVersion)
+                this.stBrowserKernelVersion = new TEnvVersionInfo("Unkown");
+
+            // 判定浏览器的壳
+            do {
+            } while (false);
+
+            if (ua.match(/ia64/i))
+                this.strBrowserArchitecture = "IA64";
+            else if (ua.match(/win64|x64|x86_64/i))
+                this.strBrowserArchitecture = "x86_64";
+        }
+    };
 
 
     // Webkit浏览器检测类
@@ -760,7 +843,6 @@ module Util {
         private strBrowserKernelName = "Webkit";
         private stBrowserVersion: TEnvVersionInfo;
         private stBrowserKernelVersion: TEnvVersionInfo;
-        private bIsMobile = false;
         private strAdditional = "";
 
         public getBrowserName() {
@@ -793,7 +875,6 @@ module Util {
 
         constructor(ori: TEnvOriData, sysInfo: IEnvSystemInfo) {
             super(ori, sysInfo);
-            this.bIsMobile = sysInfo.isMobile();
 
             this._init_branch(ori.userAgent, sysInfo);
         }
@@ -896,7 +977,6 @@ module Util {
         private strBrowserKernelName = "Gecko";
         private stBrowserVersion: TEnvVersionInfo;
         private stBrowserKernelVersion: TEnvVersionInfo;
-        private bIsMobile = false;
         private strAdditional = "";
 
         public getBrowserName() {
@@ -929,7 +1009,6 @@ module Util {
 
         constructor(ori: TEnvOriData, sysInfo: IEnvSystemInfo) {
             super(ori, sysInfo);
-            this.bIsMobile = sysInfo.isMobile();
 
             this._init_branch(ori.userAgent, sysInfo);
         }
@@ -955,7 +1034,6 @@ module Util {
         private strBrowserKernelName = "Unknown";
         private stBrowserVersion: TEnvVersionInfo;
         private stBrowserKernelVersion: TEnvVersionInfo;
-        private bIsMobile = false;
         private strAdditional = "";
 
         public getBrowserName() {
@@ -988,7 +1066,6 @@ module Util {
 
         constructor(ori: TEnvOriData, sysInfo: IEnvSystemInfo) {
             super(ori, sysInfo);
-            this.bIsMobile = sysInfo.isMobile();
 
             this._init_branch(ori.userAgent, sysInfo);
         }
@@ -1120,7 +1197,7 @@ module Util {
             obj.doc = document || {};
             obj.nav = navigator || { userAgent: "" };
             obj.userAgent = obj.nav.userAgent || "";
-        };
+        }
 
         constructor() {
             this.OriData = new TEnvOriData();
@@ -1141,6 +1218,8 @@ module Util {
                 this.BrowserInfo = new TEnvBrowserOperaInfo(this.OriData, this.SysInfo);
             else if (this.OriData.userAgent.match(/msie|trident/i))
                 this.BrowserInfo = new TEnvBrowserIEInfo(this.OriData, this.SysInfo);
+            else if (this.OriData.userAgent.match(/edge/i))
+                this.BrowserInfo = new TEnvBrowserEdgeInfo(this.OriData, this.SysInfo);
             else if (this.OriData.userAgent.match(/safari|applewebkit/i))
                 this.BrowserInfo = new TEnvBrowserWebkitInfo(this.OriData, this.SysInfo);
             else if (this.OriData.userAgent.match(/firefox|gecko/i))
@@ -1207,7 +1286,6 @@ module Util {
             }
 
             // 结束
-
         }
 
         public getOriInfo() {
@@ -1257,5 +1335,3 @@ module Util {
         } catch (e) { }
     })();
 }
-
-
